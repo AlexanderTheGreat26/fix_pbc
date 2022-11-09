@@ -126,7 +126,7 @@ data_tuple rotation (data_tuple coordinate, const double & dist) {
         cos_gamma = std::pow(-1, k) * std::sqrt(1.0 - (std::pow(cos_phi, 2) + std::pow(cos_psi, 2)));
         data_tuple offset = std::make_tuple(cos_gamma * dist, cos_phi * dist, cos_psi * dist);
         vector_offset(coordinate, offset);
-    } while (!out_of_box(coordinate, new_box_size)); // We have to stay inside the box.
+    } while (out_of_box(coordinate, new_box_size)); // We have to stay inside the box.
     return coordinate;
 }
 
