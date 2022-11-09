@@ -18,6 +18,7 @@
 
 const int first_inserted_atom = 648;
 const double OH_dist = 1.0;
+const double new_box_size = 19.235;
 
 
 std::random_device rd;  // Will be used to obtain a seed for the random number engine.
@@ -93,24 +94,39 @@ void vector_offset (std::tuple<Tp...>& vector, std::tuple<Tp...>& offset) {
 }
 
 
+// Returns true if atom inside the box.
+template<typename T, size_t... Is>
+bool out_of_box_impl (T const& t, std::index_sequence<Is...>, const double & box_size) {
+    return ((std::get<Is>(t) > box_size) & ...);
+}
+
+template <class Tuple>
+bool out_of_box (const Tuple & t, const double & box_size) {
+    constexpr auto size = std::tuple_size<Tuple>{};
+    return out_of_box_impl(t, std::make_index_sequence<size>{}, box_size);
+}
+
+
 // Generate random direction cosines then offsets the atom around ref.
 data_tuple rotation (data_tuple coordinate, const double & dist) {
     std::uniform_real_distribution<> dis(0.0, 1.0);
     std::uniform_int_distribution<> dis_int(1, 2);
     double cos_phi, a, b, cos_psi, cos_gamma, k, d = 10; //Why d = 10? Works! Do not touch!
     do {
-        cos_phi = 2 * dis(gen) - 1;
         do {
-            a = 2 * dis(gen) - 1;
-            b = 2 * dis(gen) - 1;
-            d = std::pow(a, 2) + std::pow(b, 2);
-        } while (d > 1);
-        cos_psi = a / std::sqrt(d);
-    } while (std::pow(cos_phi, 2) + std::pow(cos_psi, 2) > 1.0);
-    k = dis_int(gen);
-    cos_gamma = std::pow(-1, k) * std::sqrt(1.0 - (std::pow(cos_phi, 2) + std::pow(cos_psi, 2)));
-    data_tuple offset = std::make_tuple(cos_gamma * dist, cos_phi * dist, cos_psi * dist);
-    vector_offset (coordinate, offset);
+            cos_phi = 2 * dis(gen) - 1;
+            do {
+                a = 2 * dis(gen) - 1;
+                b = 2 * dis(gen) - 1;
+                d = std::pow(a, 2) + std::pow(b, 2);
+            } while (d > 1);
+            cos_psi = a / std::sqrt(d);
+        } while (std::pow(cos_phi, 2) + std::pow(cos_psi, 2) > 1.0);
+        k = dis_int(gen);
+        cos_gamma = std::pow(-1, k) * std::sqrt(1.0 - (std::pow(cos_phi, 2) + std::pow(cos_psi, 2)));
+        data_tuple offset = std::make_tuple(cos_gamma * dist, cos_phi * dist, cos_psi * dist);
+        vector_offset(coordinate, offset);
+    } while (!out_of_box(coordinate, new_box_size)); // We have to stay inside the box.
     return coordinate;
 }
 
